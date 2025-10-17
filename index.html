@@ -92,8 +92,7 @@
     let gameOver = false;
 
     let asteroidIntervalMs = 1000;  
-    let asteroidTimer = 0;          
-    let lastTime = performance.now();
+    let lastSpawn = Date.now();
 
     let personalBest = parseInt(localStorage.getItem('personalBest')) || 0;
     let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
@@ -180,22 +179,21 @@
       scoreBoard.textContent = `Score: 0 | Best: ${personalBest}`;
       gameOver = false;
       gameOverMenu.style.display = 'none';
-      lastTime = performance.now();
+      lastSpawn = Date.now();
       requestAnimationFrame(updateGame);
     });
 
-    function updateGame(currentTime) {
+    function updateGame() {
       if(gameOver) return;
-      let delta = currentTime - lastTime;
-      lastTime = currentTime;
-      asteroidTimer += delta;
 
       moveRocket();
       moveAsteroids();
 
-      if(asteroidTimer > asteroidIntervalMs) {
+      // use real-world time for asteroid spawns
+      let now = Date.now();
+      if(now - lastSpawn > asteroidIntervalMs) {
         createAsteroid();
-        asteroidTimer = 0;
+        lastSpawn = now;
       }
 
       requestAnimationFrame(updateGame);
