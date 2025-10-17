@@ -90,13 +90,6 @@
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(3); opacity: 0; }
   }
-  .particle {
-    position: absolute;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 101;
-    opacity: 1;
-  }
   .smoke {
     position: absolute;
     width: 8px;
@@ -166,19 +159,9 @@ function createAsteroid() {
   const type = Math.random();
   let size, speedMultiplier, points;
 
-  if(type < 0.3){ // small
-    size = 30;
-    speedMultiplier = 1.5;
-    points = 1;
-  } else if(type < 0.7){ // medium
-    size = 40;
-    speedMultiplier = 1.2;
-    points = 2;
-  } else { // large
-    size = 50;
-    speedMultiplier = 1;
-    points = 3;
-  }
+  if(type < 0.3){ size = 30; speedMultiplier = 1.5; points = 1; }
+  else if(type < 0.7){ size = 40; speedMultiplier = 1.2; points = 2; }
+  else { size = 50; speedMultiplier = 1; points = 3; }
 
   asteroid.style.width = size + 'px';
   asteroid.style.height = size + 'px';
@@ -273,32 +256,6 @@ function triggerExplosion() {
   explosion.style.left = (x-40)+'px';
   explosion.style.top = (y-40)+'px';
   gameArea.appendChild(explosion);
-
-  for(let i=0;i<40;i++){
-    const p = document.createElement('div');
-    p.classList.add('particle');
-    const size = Math.random()*5 + 3;
-    p.style.width = size+'px';
-    p.style.height = size+'px';
-    p.style.left = x+'px';
-    p.style.top = y+'px';
-    p.style.background = ['orange','yellow','red'][Math.floor(Math.random()*3)];
-    gameArea.appendChild(p);
-
-    const angle = Math.random()*2*Math.PI;
-    const speed = Math.random()*5 + 2;
-    const dx = Math.cos(angle)*speed;
-    const dy = Math.sin(angle)*speed;
-    let t = 0;
-
-    const interval = setInterval(()=> {
-      t+=0.02;
-      p.style.left = x + dx*t*15 +'px';
-      p.style.top = y + dy*t*15 +'px';
-      p.style.opacity = 1 - t*2;
-      if(t>0.5){ clearInterval(interval); p.remove(); }
-    },16);
-  }
 
   setTimeout(()=>{ rocket.style.display='none'; }, 100);
 
