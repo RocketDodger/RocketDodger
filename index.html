@@ -1,293 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rocket Dodger</title>
-<style>
-  body {
-    margin: 0;
-    background: black;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-    color: white;
-  }
-  #gameArea {
-    position: relative;
-    width: 300px;
-    height: 500px;
-    background: #111;
-    overflow: hidden;
-    border: 2px solid white;
-  }
-  #rocket {
-    position: absolute;
-    bottom: 20px;
-    left: 130px;
-    width: 40px;
-    height: 60px;
-    z-index: 2;
-    background: url('rocket.png') no-repeat center center;
-    background-size: contain;
-  }
-  .asteroid {
-    position: absolute;
-    top: -50px;
-    z-index: 2;
-    background: url('asteroid.png') no-repeat center center;
-    background-size: contain;
-  }
-  .star {
-    position: absolute;
-    width: 2px;
-    height: 2px;
-    background: white;
-    border-radius: 50%;
-    z-index: 1;
-  }
-  #scoreBoard {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    font-size: 16px;
-    z-index: 4;
-  }
-  #gameOverMenu {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.9);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-    color: white;
-    font-size: 18px;
-    display: none;
-  }
-  #gameOverMenu button {
-    padding: 10px 20px;
-    margin-top: 10px;
-    font-size: 18px;
-    cursor: pointer;
-  }
-  .explosion {
-    position: absolute;
-    width: 80px;
-    height: 80px;
-    background: radial-gradient(circle, yellow 0%, orange 50%, red 100%);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 100;
-    animation: explode 0.6s forwards;
-  }
-  @keyframes explode {
-    0% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(3); opacity: 0; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>RocketDodger</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+    #gameArea {
+      position: relative;
+      width: 300px;
+      height: 500px;
+      margin: 20px auto;
+      background: #111;
+      overflow: hidden;
+      border: 2px solid white;
+    }
+    #rocket {
+      position: absolute;
+      bottom: 20px;
+      left: 130px;
+      width: 40px;
+      height: 60px;
+      background: url('rocket.png') no-repeat center/cover;
+    }
+    .asteroid {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: url('asteroid.png') no-repeat center/cover;
+    }
+    #scoreBoard {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 18px;
+    }
+    #gameOverMenu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 15px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-<div id="gameArea">
-  <div id="rocket"></div>
-  <div id="scoreBoard">Score: 0 | Best: 0</div>
-  <div id="gameOverMenu">
-    <div id="finalScore"></div>
-    <div id="personalBestDisplay"></div>
-    <div id="highScoresDisplay"></div>
-    <button onclick="restartGame()">Play Again</button>
+  <div id="gameArea">
+    <div id="rocket"></div>
+    <div id="gameOverMenu">
+      <h2>Game Over</h2>
+      <div id="finalScore"></div>
+      <div id="personalBestDisplay"></div>
+      <div id="highScoresDisplay"></div>
+      <button id="playAgain">Play Again</button>
+    </div>
   </div>
-</div>
+  <div id="scoreBoard">Score: 0</div>
 
-<script>
-const rocket = document.getElementById('rocket');
-const gameArea = document.getElementById('gameArea');
-const scoreBoard = document.getElementById('scoreBoard');
-const gameOverMenu = document.getElementById('gameOverMenu');
-const finalScoreDiv = document.getElementById('finalScore');
-const personalBestDiv = document.getElementById('personalBestDisplay');
-const highScoresDiv = document.getElementById('highScoresDisplay');
+  <script>
+    const rocket = document.getElementById('rocket');
+    const gameArea = document.getElementById('gameArea');
+    const scoreBoard = document.getElementById('scoreBoard');
+    const gameOverMenu = document.getElementById('gameOverMenu');
+    const finalScoreDiv = document.getElementById('finalScore');
+    const personalBestDiv = document.getElementById('personalBestDisplay');
+    const highScoresDiv = document.getElementById('highScoresDisplay');
+    const playAgainBtn = document.getElementById('playAgain');
 
-let rocketPos = 130;
-let moveLeft = false;
-let moveRight = false;
-let asteroids = [];
-let stars = [];
-let score = 0;
-let speed = 2;
-let gameOver = false;
-let asteroidInterval;
+    let rocketPos = 130;
+    let moveLeft = false;
+    let moveRight = false;
+    let asteroids = [];
+    let score = 0;
+    let speed = 2;
+    let gameOver = false;
 
-let personalBest = parseInt(localStorage.getItem('personalBest')) || 0;
-let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+    let asteroidIntervalMs = 1000;  
+    let asteroidTimer = 0;          
+    let lastTime = performance.now();
 
-document.addEventListener('keydown', e => {
-  if(e.key === 'ArrowLeft') moveLeft = true;
-  if(e.key === 'ArrowRight') moveRight = true;
-});
-document.addEventListener('keyup', e => {
-  if(e.key === 'ArrowLeft') moveLeft = false;
-  if(e.key === 'ArrowRight') moveRight = false;
-});
+    let personalBest = parseInt(localStorage.getItem('personalBest')) || 0;
+    let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
 
-function moveRocket() {
-  if(moveLeft && rocketPos > 0) rocketPos -= 5;
-  if(moveRight && rocketPos < 260) rocketPos += 5;
-  rocket.style.left = rocketPos + 'px';
-}
+    document.addEventListener('keydown', e => {
+      if(e.key === 'ArrowLeft') moveLeft = true;
+      if(e.key === 'ArrowRight') moveRight = true;
+    });
+    document.addEventListener('keyup', e => {
+      if(e.key === 'ArrowLeft') moveLeft = false;
+      if(e.key === 'ArrowRight') moveRight = false;
+    });
 
-function createAsteroid() {
-  const asteroid = document.createElement('div');
-  asteroid.classList.add('asteroid');
-
-  const type = Math.random();
-  let size, speedMultiplier, points;
-
-  if(type < 0.3){ size = 30; speedMultiplier = 1.5; points = 1; }
-  else if(type < 0.7){ size = 40; speedMultiplier = 1.2; points = 2; }
-  else { size = 50; speedMultiplier = 1; points = 3; }
-
-  asteroid.style.width = size + 'px';
-  asteroid.style.height = size + 'px';
-  asteroid.dataset.size = size;
-  asteroid.dataset.speedMultiplier = speedMultiplier;
-  asteroid.dataset.points = points;
-  asteroid.style.left = Math.floor(Math.random() * (300 - size)) + 'px';
-  asteroid.style.top = '-50px';
-  asteroid.dataset.rotation = 0;
-  asteroid.dataset.rotSpeed = (Math.random()*4-2);
-  gameArea.appendChild(asteroid);
-  asteroids.push(asteroid);
-}
-
-function moveAsteroids() {
-  const padding = 2;
-  asteroids.forEach((asteroid, index) => {
-    let top = parseInt(asteroid.style.top);
-    top += speed * parseFloat(asteroid.dataset.speedMultiplier);
-    asteroid.style.top = top + 'px';
-
-    let rotation = parseFloat(asteroid.dataset.rotation);
-    rotation += parseFloat(asteroid.dataset.rotSpeed);
-    asteroid.style.transform = `rotate(${rotation}deg)`;
-    asteroid.dataset.rotation = rotation;
-
-    const rocketRect = rocket.getBoundingClientRect();
-    const astRect = asteroid.getBoundingClientRect();
-    if(!(rocketRect.right-padding<astRect.left+padding ||
-         rocketRect.left+padding>astRect.right-padding ||
-         rocketRect.bottom-padding<astRect.top+padding ||
-         rocketRect.top-padding>astRect.bottom-padding)) {
-      triggerExplosion();
+    function moveRocket() {
+      if(moveLeft && rocketPos > 0) rocketPos -= 5;
+      if(moveRight && rocketPos < 260) rocketPos += 5;
+      rocket.style.left = rocketPos + 'px';
     }
 
-    if(top > 500) {
-      asteroid.remove();
-      asteroids.splice(index, 1);
-      score += parseInt(asteroid.dataset.points);
-      scoreBoard.textContent = `Score: ${score} | Best: ${personalBest}`;
-      if(score > personalBest) personalBest = score;
-      adjustDifficulty();
+    function createAsteroid() {
+      const asteroid = document.createElement('div');
+      asteroid.classList.add('asteroid');
+
+      const type = Math.random();
+      let size, speedMultiplier, points;
+      if(type < 0.3){ size = 30; speedMultiplier = 1.5; points = 1; }
+      else if(type < 0.7){ size = 40; speedMultiplier = 1.2; points = 2; }
+      else { size = 50; speedMultiplier = 1; points = 3; }
+
+      asteroid.style.width = size + 'px';
+      asteroid.style.height = size + 'px';
+      asteroid.dataset.speedMultiplier = speedMultiplier;
+      asteroid.dataset.points = points;
+      asteroid.style.left = Math.floor(Math.random() * (300 - size)) + 'px';
+      asteroid.style.top = '-50px';
+
+      gameArea.appendChild(asteroid);
+      asteroids.push(asteroid);
     }
-  });
-}
 
-// Parallax stars
-for(let i=0;i<50;i++){
-  const star = document.createElement('div');
-  star.classList.add('star');
-  star.style.left = Math.random() * 300 + 'px';
-  star.style.top = Math.random() * 500 + 'px';
-  star.dataset.speed = Math.random() * 2 + 0.5;
-  gameArea.appendChild(star);
-  stars.push(star);
-}
+    function moveAsteroids() {
+      asteroids.forEach((asteroid, index) => {
+        let top = parseInt(asteroid.style.top);
+        top += speed * parseFloat(asteroid.dataset.speedMultiplier);
+        asteroid.style.top = top + 'px';
 
-function moveStars() {
-  stars.forEach(star => {
-    let top = parseFloat(star.style.top);
-    top += parseFloat(star.dataset.speed);
-    if(top > 500) top = 0;
-    star.style.top = top + 'px';
-  });
-}
+        const rocketRect = rocket.getBoundingClientRect();
+        const astRect = asteroid.getBoundingClientRect();
+        if(!(rocketRect.right<astRect.left || rocketRect.left>astRect.right ||
+             rocketRect.bottom<astRect.top || rocketRect.top>astRect.bottom)) {
+          endGame();
+        }
 
-function triggerExplosion() {
-  if(gameOver) return;
-  gameOver = true;
+        if(top > 500) {
+          asteroid.remove();
+          asteroids.splice(index, 1);
+          score += parseInt(asteroid.dataset.points);
+          scoreBoard.textContent = `Score: ${score} | Best: ${personalBest}`;
+          if(score > personalBest) personalBest = score;
+        }
+      });
+    }
 
-  const rocketRect = rocket.getBoundingClientRect();
-  const gameRect = gameArea.getBoundingClientRect();
-  const x = rocketRect.left - gameRect.left + rocketRect.width/2;
-  const y = rocketRect.top - gameRect.top + rocketRect.height/2;
+    function endGame() {
+      gameOver = true;
+      finalScoreDiv.textContent = "Final Score: " + score;
+      personalBestDiv.textContent = "Personal Best: " + personalBest;
+      if(score > personalBest) localStorage.setItem('personalBest', personalBest);
+      highScores.push(score);
+      highScores.sort((a,b)=>b-a);
+      if(highScores.length > 5) highScores.length = 5;
+      localStorage.setItem('highScores', JSON.stringify(highScores));
+      highScoresDiv.textContent = "High Scores: " + highScores.join(", ");
+      gameOverMenu.style.display = 'flex';
+    }
 
-  const explosion = document.createElement('div');
-  explosion.classList.add('explosion');
-  explosion.style.left = (x-40)+'px';
-  explosion.style.top = (y-40)+'px';
-  gameArea.appendChild(explosion);
+    playAgainBtn.addEventListener('click', () => {
+      asteroids.forEach(ast => ast.remove());
+      asteroids = [];
+      score = 0;
+      speed = 2;
+      rocketPos = 130;
+      rocket.style.left = rocketPos + 'px';
+      scoreBoard.textContent = `Score: 0 | Best: ${personalBest}`;
+      gameOver = false;
+      gameOverMenu.style.display = 'none';
+      lastTime = performance.now();
+      requestAnimationFrame(updateGame);
+    });
 
-  rocket.style.display='none';
+    function updateGame(currentTime) {
+      if(gameOver) return;
+      let delta = currentTime - lastTime;
+      lastTime = currentTime;
+      asteroidTimer += delta;
 
-  setTimeout(()=>{ explosion.remove(); endGame(); }, 800);
-}
+      moveRocket();
+      moveAsteroids();
 
-function adjustDifficulty() {
-  if(score % 10 === 0 && score !== 0){
-    speed += 0.5;
-    clearInterval(asteroidInterval);
-    let intervalTime = Math.max(300, 1000 - score*10);
-    asteroidInterval = setInterval(createAsteroid, intervalTime);
-  }
-}
+      if(asteroidTimer > asteroidIntervalMs) {
+        createAsteroid();
+        asteroidTimer = 0;
+      }
 
-function endGame() {
-  clearInterval(asteroidInterval);
-  localStorage.setItem('personalBest', personalBest);
-  highScores.push(score);
-  highScores.sort((a,b)=>b-a);
-  highScores = highScores.slice(0,5);
-  localStorage.setItem('highScores', JSON.stringify(highScores));
-  finalScoreDiv.textContent = `Your Score: ${score}`;
-  personalBestDiv.textContent = `Personal Best: ${personalBest}`;
-  highScoresDiv.innerHTML = "High Scores:<br>" + highScores.map((s,i)=>`${i+1}. ${s}`).join('<br>');
-  gameOverMenu.style.display='flex';
-}
+      requestAnimationFrame(updateGame);
+    }
 
-function restartGame() {
-  asteroids.forEach(a => a.remove());
-  asteroids = [];
-  rocket.style.display='block';
-  score = 0;
-  speed = 2;
-  rocketPos = 130;
-  rocket.style.left = rocketPos + 'px';
-  gameOver = false;
-  gameOverMenu.style.display='none';
-  scoreBoard.textContent = `Score: ${score} | Best: ${personalBest}`;
-  startGame();
-}
-
-function gameLoop() {
-  if(!gameOver){
-    moveRocket();
-    moveAsteroids();
-    moveStars();
-    requestAnimationFrame(gameLoop);
-  }
-}
-
-function startGame() {
-  asteroidInterval = setInterval(createAsteroid, 1000);
-  gameLoop();
-}
-
-startGame();
-</script>
+    requestAnimationFrame(updateGame);
+  </script>
 </body>
 </html>
