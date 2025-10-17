@@ -48,7 +48,7 @@
     const scoreEl = document.getElementById("score");
     const startButton = document.getElementById("startButton");
 
-    let player, asteroids, bullets, score, gameActive, lastSpawnTime;
+    let player, asteroids, bullets, score, gameActive, spawnInterval, lastSpawn;
 
     class Player {
       constructor(x, y) {
@@ -114,28 +114,33 @@
       score = 0;
       scoreEl.textContent = score;
       gameActive = true;
-      lastSpawnTime = Date.now();
+      lastSpawn = Date.now();
+      spawnAsteroids();
     }
 
-    function spawnAsteroid() {
-      const radius = Math.random() * 30 + 10;
-      let x, y;
+    function spawnAsteroids() {
+      clearInterval(spawnInterval);
+      spawnInterval = setInterval(() => {
+        if (!gameActive || document.hidden) return;
+        const radius = Math.random() * 30 + 10;
+        let x, y;
 
-      if (Math.random() < 0.5) {
-        x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius;
-        y = Math.random() * canvas.height;
-      } else {
-        x = Math.random() * canvas.width;
-        y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
-      }
+        if (Math.random() < 0.5) {
+          x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius;
+          y = Math.random() * canvas.height;
+        } else {
+          x = Math.random() * canvas.width;
+          y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
+        }
 
-      const angle = Math.atan2(player.y - y, player.x - x);
-      const velocity = {
-        x: Math.cos(angle) * (1 + Math.random() * 2),
-        y: Math.sin(angle) * (1 + Math.random() * 2),
-      };
+        const angle = Math.atan2(player.y - y, player.x - x);
+        const velocity = {
+          x: Math.cos(angle) * (1 + Math.random() * 2),
+          y: Math.sin(angle) * (1 + Math.random() * 2),
+        };
 
-      asteroids.push(new Asteroid(x, y, radius, velocity));
+        asteroids.push(new Asteroid(x, y, radius, velocity));
+      }, 1000);
     }
 
     function animate() {
@@ -143,13 +148,6 @@
       requestAnimationFrame(animate);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       player.draw();
-
-      // spawn asteroid every 1 second
-      const now = Date.now();
-      if (now - lastSpawnTime > 1000) {
-        spawnAsteroid();
-        lastSpawnTime = now;
-      }
 
       bullets.forEach((bullet, index) => {
         bullet.update();
@@ -167,6 +165,7 @@
         const dist = Math.hypot(player.x - asteroid.x, player.y - asteroid.y);
         if (dist - asteroid.radius - player.radius < 1) {
           gameActive = false;
+          clearInterval(spawnInterval);
           startButton.style.display = "block";
         }
 
@@ -195,6 +194,15 @@
       startButton.style.display = "none";
       init();
       animate();
+    });
+
+    // Handle tab visibility to stop asteroid pileup
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        clearInterval(spawnInterval);
+      } else if (gameActive) {
+        spawnAsteroids();
+      }
     });
   </script>
 </body>
