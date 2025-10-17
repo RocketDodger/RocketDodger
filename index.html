@@ -90,15 +90,6 @@
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(3); opacity: 0; }
   }
-  .smoke {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    background: gray;
-    border-radius: 50%;
-    opacity: 0.7;
-    z-index: 0;
-  }
 </style>
 </head>
 <body>
@@ -127,7 +118,6 @@ let moveLeft = false;
 let moveRight = false;
 let asteroids = [];
 let stars = [];
-let smokeParticles = [];
 let score = 0;
 let speed = 2;
 let gameOver = false;
@@ -149,7 +139,6 @@ function moveRocket() {
   if(moveLeft && rocketPos > 0) rocketPos -= 5;
   if(moveRight && rocketPos < 260) rocketPos += 5;
   rocket.style.left = rocketPos + 'px';
-  createSmoke();
 }
 
 function createAsteroid() {
@@ -228,20 +217,6 @@ function moveStars() {
   });
 }
 
-function createSmoke() {
-  const s = document.createElement('div');
-  s.classList.add('smoke');
-  s.style.left = rocketPos + 16 + 'px';
-  s.style.top = 70 + 'px';
-  gameArea.appendChild(s);
-  smokeParticles.push(s);
-
-  setTimeout(()=> {
-    s.remove();
-    smokeParticles.splice(smokeParticles.indexOf(s),1);
-  },500);
-}
-
 function triggerExplosion() {
   if(gameOver) return;
   gameOver = true;
@@ -257,21 +232,7 @@ function triggerExplosion() {
   explosion.style.top = (y-40)+'px';
   gameArea.appendChild(explosion);
 
-  setTimeout(()=>{ rocket.style.display='none'; }, 100);
-
-  const shakeDuration = 500;
-  const shakeInterval = 16;
-  let elapsed = 0;
-  const shake = setInterval(() => {
-    const dx = (Math.random()-0.5)*10;
-    const dy = (Math.random()-0.5)*10;
-    gameArea.style.transform = `translate(${dx}px, ${dy}px)`;
-    elapsed += shakeInterval;
-    if(elapsed >= shakeDuration) {
-      clearInterval(shake);
-      gameArea.style.transform = 'translate(0,0)';
-    }
-  }, shakeInterval);
+  rocket.style.display='none';
 
   setTimeout(()=>{ explosion.remove(); endGame(); }, 800);
 }
