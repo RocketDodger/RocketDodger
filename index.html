@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -34,13 +34,14 @@
     background: url('rocket.png') no-repeat center center;
     background-size: contain;
   }
+  /* removed hitbox visualization */
   #hitbox {
     position: absolute;
     top: 15px;
     left: 12px;
     width: 16px;
     height: 35px;
-    background: transparent;
+    background: transparent; 
     z-index: 3;
   }
   .asteroid {
@@ -170,6 +171,7 @@ function moveRocket() {
 }
 
 function createAsteroid() {
+  if(asteroids.length > 10) return; // cap number of asteroids
   const asteroid = document.createElement('div');
   asteroid.classList.add('asteroid');
 
@@ -242,7 +244,7 @@ for(let i=0;i<50;i++){
   star.classList.add('star');
   star.style.left = Math.random() * 300 + 'px';
   star.style.top = Math.random() * 500 + 'px';
-  star.dataset.speed = Math.random() * 2 + 0.5; // speed layer
+  star.dataset.speed = Math.random() * 2 + 0.5;
   gameArea.appendChild(star);
   stars.push(star);
 }
@@ -313,20 +315,6 @@ function triggerExplosion() {
 
   setTimeout(()=>{ rocket.style.display='none'; }, 100);
 
-  const shakeDuration = 500;
-  const shakeInterval = 16;
-  let elapsed = 0;
-  const shake = setInterval(() => {
-    const dx = (Math.random()-0.5)*10;
-    const dy = (Math.random()-0.5)*10;
-    gameArea.style.transform = `translate(${dx}px, ${dy}px)`;
-    elapsed += shakeInterval;
-    if(elapsed >= shakeDuration) {
-      clearInterval(shake);
-      gameArea.style.transform = 'translate(0,0)';
-    }
-  }, shakeInterval);
-
   setTimeout(()=>{ explosion.remove(); endGame(); }, 800);
 }
 
@@ -358,6 +346,7 @@ function restartGame() {
   asteroids = [];
   rocket.style.display='block';
   score = 0;
+  scoreBoard.textContent = `Score: 0 | Best: ${personalBest}`; // reset score right away
   speed = 2;
   rocketPos = 130;
   rocket.style.left = rocketPos + 'px';
@@ -379,6 +368,17 @@ function startGame() {
   asteroidInterval = setInterval(createAsteroid, 1000);
   gameLoop();
 }
+
+// Pause asteroids when tab not visible
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    clearInterval(asteroidInterval);
+  } else {
+    if(!gameOver){
+      asteroidInterval = setInterval(createAsteroid, 1000);
+    }
+  }
+});
 
 startGame();
 </script>
