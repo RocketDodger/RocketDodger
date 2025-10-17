@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -33,16 +33,6 @@
     z-index: 2;
     background: url('rocket.png') no-repeat center center;
     background-size: contain;
-  }
-  /* removed hitbox visualization */
-  #hitbox {
-    position: absolute;
-    top: 15px;
-    left: 12px;
-    width: 16px;
-    height: 35px;
-    background: transparent; 
-    z-index: 3;
   }
   .asteroid {
     position: absolute;
@@ -120,7 +110,7 @@
 </head>
 <body>
 <div id="gameArea">
-  <div id="rocket"><div id="hitbox"></div></div>
+  <div id="rocket"></div>
   <div id="scoreBoard">Score: 0 | Best: 0</div>
   <div id="gameOverMenu">
     <div id="finalScore"></div>
@@ -132,7 +122,6 @@
 
 <script>
 const rocket = document.getElementById('rocket');
-const hitbox = document.getElementById('hitbox');
 const gameArea = document.getElementById('gameArea');
 const scoreBoard = document.getElementById('scoreBoard');
 const gameOverMenu = document.getElementById('gameOverMenu');
@@ -151,7 +140,7 @@ let speed = 2;
 let gameOver = false;
 let asteroidInterval;
 
-let personalBest = localStorage.getItem('personalBest') || 0;
+let personalBest = parseInt(localStorage.getItem('personalBest')) || 0;
 let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
 
 document.addEventListener('keydown', e => {
@@ -171,7 +160,6 @@ function moveRocket() {
 }
 
 function createAsteroid() {
-  if(asteroids.length > 10) return; // cap number of asteroids
   const asteroid = document.createElement('div');
   asteroid.classList.add('asteroid');
 
@@ -200,7 +188,7 @@ function createAsteroid() {
   asteroid.style.left = Math.floor(Math.random() * (300 - size)) + 'px';
   asteroid.style.top = '-50px';
   asteroid.dataset.rotation = 0;
-  asteroid.dataset.rotSpeed = (Math.random()*4-2); // rotation
+  asteroid.dataset.rotSpeed = (Math.random()*4-2);
   gameArea.appendChild(asteroid);
   asteroids.push(asteroid);
 }
@@ -212,13 +200,12 @@ function moveAsteroids() {
     top += speed * parseFloat(asteroid.dataset.speedMultiplier);
     asteroid.style.top = top + 'px';
 
-    // Rotate asteroid
     let rotation = parseFloat(asteroid.dataset.rotation);
     rotation += parseFloat(asteroid.dataset.rotSpeed);
     asteroid.style.transform = `rotate(${rotation}deg)`;
     asteroid.dataset.rotation = rotation;
 
-    const rocketRect = hitbox.getBoundingClientRect();
+    const rocketRect = rocket.getBoundingClientRect();
     const astRect = asteroid.getBoundingClientRect();
     if(!(rocketRect.right-padding<astRect.left+padding ||
          rocketRect.left+padding>astRect.right-padding ||
@@ -304,7 +291,7 @@ function triggerExplosion() {
     const dy = Math.sin(angle)*speed;
     let t = 0;
 
-    const interval = setInterval(()=>{
+    const interval = setInterval(()=> {
       t+=0.02;
       p.style.left = x + dx*t*15 +'px';
       p.style.top = y + dy*t*15 +'px';
@@ -315,10 +302,23 @@ function triggerExplosion() {
 
   setTimeout(()=>{ rocket.style.display='none'; }, 100);
 
+  const shakeDuration = 500;
+  const shakeInterval = 16;
+  let elapsed = 0;
+  const shake = setInterval(() => {
+    const dx = (Math.random()-0.5)*10;
+    const dy = (Math.random()-0.5)*10;
+    gameArea.style.transform = `translate(${dx}px, ${dy}px)`;
+    elapsed += shakeInterval;
+    if(elapsed >= shakeDuration) {
+      clearInterval(shake);
+      gameArea.style.transform = 'translate(0,0)';
+    }
+  }, shakeInterval);
+
   setTimeout(()=>{ explosion.remove(); endGame(); }, 800);
 }
 
-// Difficulty scaling
 function adjustDifficulty() {
   if(score % 10 === 0 && score !== 0){
     speed += 0.5;
@@ -346,12 +346,12 @@ function restartGame() {
   asteroids = [];
   rocket.style.display='block';
   score = 0;
-  scoreBoard.textContent = `Score: 0 | Best: ${personalBest}`; // reset score right away
   speed = 2;
   rocketPos = 130;
   rocket.style.left = rocketPos + 'px';
   gameOver = false;
   gameOverMenu.style.display='none';
+  scoreBoard.textContent = `Score: ${score} | Best: ${personalBest}`;
   startGame();
 }
 
@@ -368,17 +368,6 @@ function startGame() {
   asteroidInterval = setInterval(createAsteroid, 1000);
   gameLoop();
 }
-
-// Pause asteroids when tab not visible
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    clearInterval(asteroidInterval);
-  } else {
-    if(!gameOver){
-      asteroidInterval = setInterval(createAsteroid, 1000);
-    }
-  }
-});
 
 startGame();
 </script>
