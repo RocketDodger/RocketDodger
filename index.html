@@ -1,33 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>RocketDodger</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: black;
-      color: white;
       font-family: Arial, sans-serif;
+      color: white;
     }
-    #score {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-size: 20px;
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: black;
     }
-    #gameOver {
+    #gameOverMenu {
       position: absolute;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 40px;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
       display: none;
-      text-align: center;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 24px;
     }
-    #playAgain {
+    button {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 20px;
@@ -36,112 +39,170 @@
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
-  <div id="score">Score: 0</div>
-  <div id="gameOver">
-    <div>Game Over</div>
-    <button id="playAgain">Play Again</button>
-  </div>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
 
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+<div id="gameOverMenu">
+  <div id="finalScore"></div>
+  <div id="personalBest"></div>
+  <div id="highScores"></div>
+  <button onclick="restartGame()">Play Again</button>
+</div>
 
-    let rocket, asteroids, score, gameOver, lastTime, asteroidTimer;
-    const asteroidInterval = 2000; // new asteroid every 2 seconds
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-    function resetGame() {
-      rocket = { x: canvas.width / 2, y: canvas.height - 60, width: 40, height: 40, speed: 7 };
-      asteroids = [];
-      score = 0;
+let rocketImg = new Image();
+rocketImg.src = "rocket.png";
+
+let asteroidImg = new Image();
+asteroidImg.src = "asteroid.png";
+
+let score = 0;
+let personalBest = localStorage.getItem('personalBest') || 0;
+let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+
+let rocket = { x: 200, y: 500, width: 40, height: 60 };
+let asteroids = [];
+let stars = [];
+let gameOver = false;
+let speed = 2;
+let keys = {};
+let asteroidTimer = 0;
+let asteroidInterval = 90; // frames between asteroids
+
+document.addEventListener("keydown", e => keys[e.code] = true);
+document.addEventListener("keyup", e => keys[e.code] = false);
+
+function createStars() {
+  for (let i = 0; i < 100; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: Math.random() * 2,
+      speed: Math.random() * 1 + 0.5
+    });
+  }
+}
+
+function drawStars() {
+  ctx.fillStyle = "white";
+  stars.forEach(star => {
+    ctx.fillRect(star.x, star.y, star.size, star.size);
+    star.y += star.speed;
+    if (star.y > canvas.height) {
+      star.y = 0;
+      star.x = Math.random() * canvas.width;
+    }
+  });
+}
+
+function drawRocket() {
+  ctx.drawImage(rocketImg, rocket.x, rocket.y, rocket.width, rocket.height);
+}
+
+function drawAsteroids() {
+  asteroids.forEach((a, i) => {
+    a.y += a.speed;
+    ctx.drawImage(asteroidImg, a.x, a.y, a.size, a.size);
+    if (a.y > canvas.height) {
+      asteroids.splice(i, 1);
+      score++;
+    }
+    if (collision(rocket, a)) {
+      endGame();
+    }
+  });
+}
+
+function collision(r, a) {
+  return !(r.x > a.x + a.size ||
+           r.x + r.width < a.x ||
+           r.y > a.y + a.size ||
+           r.y + r.height < a.y);
+}
+
+function createAsteroid() {
+  let size = Math.random() * 30 + 20;
+  let x = Math.random() * (canvas.width - size);
+  asteroids.push({ x, y: -size, size, speed: Math.random() * 2 + speed });
+}
+
+function updateRocket() {
+  if (keys["ArrowLeft"] && rocket.x > 0) rocket.x -= 5;
+  if (keys["ArrowRight"] && rocket.x < canvas.width - rocket.width) rocket.x += 5;
+  if (keys["ArrowUp"] && rocket.y > 0) rocket.y -= 5;
+  if (keys["ArrowDown"] && rocket.y < canvas.height - rocket.height) rocket.y += 5;
+}
+
+function drawScore() {
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("Score: " + score, 10, 25);
+  ctx.fillText("Best: " + personalBest, 10, 50);
+}
+
+function gameLoop() {
+  if (gameOver) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawStars();
+  drawRocket();
+  drawAsteroids();
+  drawScore();
+  updateRocket();
+
+  asteroidTimer++;
+  if (asteroidTimer > asteroidInterval) {
+    createAsteroid();
+    asteroidTimer = 0;
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  gameOver = true;
+  if (score > personalBest) {
+    personalBest = score;
+    localStorage.setItem('personalBest', personalBest);
+  }
+  highScores.push(score);
+  highScores.sort((a,b) => b-a);
+  highScores = highScores.slice(0,5);
+  localStorage.setItem('highScores', JSON.stringify(highScores));
+
+  document.getElementById("finalScore").textContent = "Your Score: " + score;
+  document.getElementById("personalBest").textContent = "Personal Best: " + personalBest;
+  document.getElementById("highScores").innerHTML = "High Scores:<br>" + highScores.map((s,i)=>`${i+1}. ${s}`).join("<br>");
+
+  document.getElementById("gameOverMenu").style.display = "flex";
+}
+
+function restartGame() {
+  score = 0;
+  rocket.x = 200;
+  rocket.y = 500;
+  asteroids = [];
+  gameOver = false;
+  document.getElementById("gameOverMenu").style.display = "none";
+  gameLoop();
+}
+
+createStars();
+gameLoop();
+
+// Fix asteroid piling when tab is inactive
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    gameOver = true; // pause game
+  } else if (!document.hidden) {
+    if (!document.getElementById("gameOverMenu").style.display.includes("flex")) {
       gameOver = false;
-      lastTime = performance.now();
-      asteroidTimer = 0;
-      document.getElementById("score").innerText = "Score: 0";
-      document.getElementById("gameOver").style.display = "none";
+      gameLoop();
     }
-
-    function drawRocket() {
-      ctx.fillStyle = "lime";
-      ctx.fillRect(rocket.x, rocket.y, rocket.width, rocket.height);
-    }
-
-    function drawAsteroids() {
-      ctx.fillStyle = "red";
-      asteroids.forEach(a => {
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
-
-    function updateAsteroids(delta) {
-      asteroidTimer += delta;
-      if (asteroidTimer > asteroidInterval) {
-        asteroids.push({ x: Math.random() * canvas.width, y: -20, radius: 20, speed: 3 + Math.random() * 3 });
-        asteroidTimer = 0;
-      }
-      asteroids.forEach(a => a.y += a.speed);
-      asteroids = asteroids.filter(a => a.y < canvas.height + a.radius);
-    }
-
-    function detectCollision() {
-      for (let a of asteroids) {
-        if (
-          rocket.x < a.x + a.radius &&
-          rocket.x + rocket.width > a.x - a.radius &&
-          rocket.y < a.y + a.radius &&
-          rocket.y + rocket.height > a.y - a.radius
-        ) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    function gameLoop(timestamp) {
-      if (gameOver) return;
-      const delta = timestamp - lastTime;
-      lastTime = timestamp;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      drawRocket();
-      updateAsteroids(delta);
-      drawAsteroids();
-
-      if (detectCollision()) {
-        gameOver = true;
-        document.getElementById("gameOver").style.display = "block";
-        return;
-      }
-
-      score += delta / 1000;
-      document.getElementById("score").innerText = "Score: " + Math.floor(score);
-
-      requestAnimationFrame(gameLoop);
-    }
-
-    document.addEventListener("keydown", e => {
-      if (gameOver) return;
-      if (e.key === "ArrowLeft" && rocket.x > 0) rocket.x -= rocket.speed;
-      if (e.key === "ArrowRight" && rocket.x + rocket.width < canvas.width) rocket.x += rocket.speed;
-    });
-
-    document.getElementById("playAgain").addEventListener("click", () => {
-      resetGame();
-      requestAnimationFrame(gameLoop);
-    });
-
-    // Handle tab visibility to stop stacking
-    document.addEventListener("visibilitychange", () => {
-      lastTime = performance.now(); // reset timer when coming back
-    });
-
-    resetGame();
-    requestAnimationFrame(gameLoop);
-  </script>
+  }
+});
+</script>
 </body>
 </html>
